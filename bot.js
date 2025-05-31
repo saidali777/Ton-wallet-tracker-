@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const fetch = require('node-fetch');
+const express = require('express');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -24,7 +25,7 @@ async function getWalletInfo(address) {
   }
 }
 
-// Get Jetton Balances
+// Get Jettons
 async function getJettons(address) {
   const url = `https://tonapi.io/v2/accounts/${address}/jettons`;
   const headers = {
@@ -71,7 +72,7 @@ async function getNFTs(address) {
   }
 }
 
-// Bot Commands
+// Bot Handlers
 bot.start((ctx) =>
   ctx.reply('👋 Send me a TON wallet address and I’ll fetch balance, Jettons, and NFTs!')
 );
@@ -93,7 +94,20 @@ bot.on('text', async (ctx) => {
   ctx.reply(response);
 });
 
+// Launch Bot
 bot.launch();
-console.log('🚀 TON Wallet Bot is running...');
+console.log('🤖 Telegram bot is running...');
+
+// ✅ Add Express server to keep Koyeb Web Service alive
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (_, res) => res.send('✅ Telegram bot is running (Koyeb keeps this alive).'));
+
+app.listen(PORT, () => {
+  console.log(`🌐 Dummy HTTP server listening on port ${PORT}`);
+});
+
+// Handle graceful shutdown
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
