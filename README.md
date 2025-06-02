@@ -16,3 +16,4 @@ A simple open-source Telegram bot that checks **TON wallet balances**, **Jetton 
 ## 💬 Example Interaction
 
 **User sends:**
+// trigger rebuild
