@@ -2,10 +2,22 @@ require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const fetch = require('node-fetch');
 const express = require('express');
+const { TonConnect } = require('@tonconnect/sdk');
+const qrcode = require('qrcode');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
+const connector = new TonConnect({
+  manifestUrl: 'https://your-domain.com/tonconnect-manifest.json', // Replace with your actual URL
+});
 
-// Get TON Balance
+// 🟢 Generate TonConnect Link and QR
+async function getTonConnectLink() {
+  const universalLink = connector.connect();
+  const qrCodeDataUrl = await qrcode.toDataURL(universalLink);
+  return { universalLink, qrCodeDataUrl };
+}
+
+// 🔹 Get TON Balance
 async function getWalletInfo(address) {
   const baseUrl = process.env.TON_API;
   const url = `${baseUrl}/getAddressInformation?address=${address}`;
@@ -13,7 +25,6 @@ async function getWalletInfo(address) {
   try {
     const response = await fetch(url);
     const data = await response.json();
-
     if (data.ok) {
       const balanceTon = parseFloat(data.result.balance) / 1e9;
       return `💰 Wallet: ${address}\n🔸 Balance: ${balanceTon.toFixed(6)} TON`;
@@ -25,7 +36,7 @@ async function getWalletInfo(address) {
   }
 }
 
-// Get Jettons
+// 🔹 Get Jettons
 async function getJettons(address) {
   const url = `https://tonapi.io/v2/accounts/${address}/jettons`;
   const headers = {
@@ -49,7 +60,7 @@ async function getJettons(address) {
   }
 }
 
-// Get NFTs
+// 🔹 Get NFTs
 async function getNFTs(address) {
   const url = `https://tonapi.io/v2/accounts/${address}/nfts`;
   const headers = {
@@ -72,11 +83,19 @@ async function getNFTs(address) {
   }
 }
 
-// Bot Handlers
-bot.start((ctx) =>
-  ctx.reply('👋 Send me a TON wallet address and I’ll fetch balance, Jettons, and NFTs!')
-);
+// 🟣 Bot Commands
+bot.start(async (ctx) => {
+  const { universalLink, qrCodeDataUrl } = await getTonConnectLink();
 
+  await ctx.reply('👋 Welcome to TON Wallet Tracker Bot!\n\n✅ Click the button below to connect your TON wallet:');
+  await ctx.reply(`[🔗 Connect Wallet](${universalLink})`, { parse_mode: 'Markdown' });
+
+  await ctx.replyWithPhoto({ source: Buffer.from(qrCodeDataUrl.split(',')[1], 'base64') }, {
+    caption: '📱 Scan this QR code in your wallet app to connect!'
+  });
+});
+
+// 🟢 Wallet Address Handler
 bot.on('text', async (ctx) => {
   const address = ctx.message.text.trim();
   if (!/^EQ|UQ/.test(address)) {
@@ -94,20 +113,19 @@ bot.on('text', async (ctx) => {
   ctx.reply(response);
 });
 
-// Launch Bot
+// 🚀 Launch Bot
 bot.launch();
 console.log('🤖 Telegram bot is running...');
 
-// ✅ Add Express server to keep Koyeb Web Service alive
+// 🌐 Dummy HTTP Server (for Koyeb)
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (_, res) => res.send('✅ Telegram bot is running (Koyeb keeps this alive).'));
-
 app.listen(PORT, () => {
   console.log(`🌐 Dummy HTTP server listening on port ${PORT}`);
 });
 
-// Handle graceful shutdown
+// 📦 Handle Graceful Shutdown
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
