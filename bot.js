@@ -8,6 +8,20 @@ const qrcode = require('qrcode');
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const connector = new TonConnect({
   manifestUrl: 'https://your-domain.com/tonconnect-manifest.json', // Replace with your actual URL
+  storage: {
+    setItem: async (key, value) => {
+      global._storage = global._storage || {};
+      global._storage[key] = value;
+    },
+    getItem: async (key) => {
+      return global._storage?.[key] || null;
+    },
+    removeItem: async (key) => {
+      if (global._storage) {
+        delete global._storage[key];
+      }
+    }
+  }
 });
 
 // 🟢 Generate TonConnect Link and QR
